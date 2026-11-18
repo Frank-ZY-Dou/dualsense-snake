@@ -59,17 +59,15 @@ cd dualsense-snake
 
 ## 屏幕上的手柄
 
-<img align="right" width="430" hspace="16" src="assets/padview.gif" alt="手柄小窗口依次演示所有输入">
-
 `./padview.py` 单独显示这张图：屏幕左下角的一个小窗口，始终在其他窗口上面，可以放在手柄正在控制的程序旁边。
+
+<p align="center">
+<img width="448" src="assets/padview.gif" alt="手柄小窗口依次演示所有输入">
+</p>
 
 按住的键会发光，摇杆帽会跟着移动，L2 和 R2 按下多深就填充多高。触摸板按压和静音键不会亮，因为内核的手柄设备不上报它们。
 
-图是矢量绘制的，放大缩小都清晰。
-
-<br clear="right">
-
-画进你自己的 GTK 或 cairo 程序：
+图是矢量绘制的，放大缩小都清晰。画进你自己的 GTK 或 cairo 程序：
 
 ```python
 from padview import draw_controller

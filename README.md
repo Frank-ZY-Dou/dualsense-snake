@@ -59,17 +59,15 @@ An apple is worth as many points as the current speed. `q` or `Esc` on the keybo
 
 ## The controller on screen
 
-<img align="right" width="430" hspace="16" src="assets/padview.gif" alt="The viewer window going through all inputs of the controller">
-
 `./padview.py` shows the picture on its own, in a small window at the bottom left of the screen that stays above other windows. Keep it next to whatever the controller is driving.
+
+<p align="center">
+<img width="448" src="assets/padview.gif" alt="The viewer window going through all inputs of the controller">
+</p>
 
 Buttons light up while they are held, the stick caps move, and L2 and R2 fill up as far as they are pulled. Two things stay dark, the touchpad click and the mute button: the kernel's gamepad device does not report them.
 
-It is a vector drawing, so it stays sharp at any size.
-
-<br clear="right">
-
-To put it into your own GTK or cairo program:
+It is a vector drawing, so it stays sharp at any size. To put it into your own GTK or cairo program:
 
 ```python
 from padview import draw_controller
