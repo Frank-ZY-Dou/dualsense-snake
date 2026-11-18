@@ -178,5 +178,5 @@ fi
 
 step "自检"
 "$PYTHON" dualsense.py
-printf '\n完成。\n  开始游戏:    %s/snake.py\n  只显示手柄:  %s/padview.py\n' "$PWD" "$PWD"
+printf '\n完成。\n  开始游戏:    %s/snake.py\n  只显示手柄:  %s/padview.py\n  录制操作:    %s/record.py\n' "$PWD" "$PWD" "$PWD"
 echo "以后只要按一下手柄的 PS 键就会自动连上，不需要再运行本脚本。"

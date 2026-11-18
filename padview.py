@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 """A lifelike picture of the DualSense controller that shows live what is pressed.
 
-    ./padview.py        a small window with the controller, kept above other windows,
-                        at the bottom left of the screen
+    ./padview.py            a small window with the controller, kept above other windows,
+                            at the bottom left of the screen
+    ./padview.py FILE       the same window, playing back a recording made with record.py
 
 draw_controller() draws the same picture into any cairo context, e.g. inside a game window.
 
@@ -11,6 +12,7 @@ start this file as ./padview.py or with /usr/bin/python3.
 """
 from __future__ import annotations
 
+import argparse
 import math
 import os
 import sys
@@ -32,6 +34,7 @@ except (ImportError, ValueError) as error:
              "start it as ./padview.py or ./snake.py, or with /usr/bin/python3.")
 
 from dualsense import DualSense, DualSenseError
+from record import EndOfRecording, Replay
 
 TAU = 2 * math.pi
 ASPECT = 0.74           # height of the picture divided by its width
@@ -428,7 +431,12 @@ def draw_controller(cr: cairo.Context, pad: DualSense, x: float, y: float, width
 
 
 def main() -> None:
-    """Show the controller in a window above all others until the window is closed."""
+    """Show the controller in a window above all others until the window is closed. With the file
+    of a recording as argument, show what was recorded instead, until the recording is over."""
+    parser = argparse.ArgumentParser(description="Show the DualSense controller and what is pressed on it.")
+    parser.add_argument("recording", nargs="?", metavar="FILE",
+                        help="a recording made with record.py, to play back instead of showing the controller")
+    recording = parser.parse_args().recording
     width, margin = 420, 14
     failure: list[DualSenseError] = []
 
@@ -440,6 +448,9 @@ def main() -> None:
     def on_input(*_: object) -> bool:
         try:
             pad.poll()
+        except EndOfRecording:
+            Gtk.main_quit()
+            return False
         except DualSenseError as error:
             failure.append(error)
             Gtk.main_quit()
@@ -450,10 +461,10 @@ def main() -> None:
     if not Gtk.init_check()[0]:
         sys.exit("error: there is no graphical desktop to open a window on")
     try:
-        pad = DualSense()
-    except DualSenseError as error:
+        pad = DualSense() if recording is None else Replay(recording)
+    except (DualSenseError, OSError, ValueError) as error:
         sys.exit(f"error: {error}")
-    window = Gtk.Window(title="DualSense")
+    window = Gtk.Window(title="DualSense" if recording is None else os.path.basename(recording))
     window.set_resizable(False)
     window.set_keep_above(True)
     area = Gtk.DrawingArea()

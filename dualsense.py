@@ -19,7 +19,7 @@ Axes:    left_x left_y right_x right_y l2_trigger r2_trigger dpad_x dpad_y
          forward is -1.0), a released trigger is -1.0.
 
 Run as a program, it prints the controller's status:  python3 dualsense.py
-padview.py shows the controller live, as a picture.
+padview.py shows the controller live, as a picture. record.py records what it does and plays it back.
 """
 from __future__ import annotations
 

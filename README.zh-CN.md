@@ -4,8 +4,8 @@
 
 **Linux 上的 PS5 DualSense 手柄，纯 Python。**
 
-一个脚本完成蓝牙配对。之后可以在自己的程序里读取手柄，<br>
-在屏幕上实时看到按了哪里，或者直接玩一局贪吃蛇。
+一个脚本完成蓝牙配对。之后可以在自己的程序里读取手柄，在屏幕上实时看到按了哪里，<br>
+把操作录下来再回放，或者直接玩一局贪吃蛇。
 
 <p>
 <img alt="Linux 5.12+" src="https://img.shields.io/badge/Linux-5.12%2B-3d9eff?style=flat-square&logo=linux&logoColor=white">
@@ -28,6 +28,7 @@
 | [`setup.sh`](setup.sh) | 检查内核驱动和 Python，通过蓝牙配对并连接手柄，最后确认 Python 能读到它。不需要 root。 |
 | [`dualsense.py`](dualsense.py) | 读取手柄：按键、摇杆、扳机、方向键和电量。单个文件，只用标准库。 |
 | [`padview.py`](padview.py) | 一张会点亮按键的手柄图，用 cairo 绘制。可以作为置顶小窗口单独运行，也可以画进你自己的程序。 |
+| [`record.py`](record.py) | 把手柄的操作录成 CSV 文件，按一个键开始、再按一次停止；录下的操作可以回放。只用标准库。 |
 | [`snake.py`](snake.py) | 贪吃蛇，用来试手柄。 |
 
 ## 快速开始
@@ -110,6 +111,57 @@ battery    : 95% (Charging)
 inputs     : 13 buttons, 8 axes
 ```
 
+## 录制与回放
+
+`./record.py` 记录手柄做过的操作。在它所在的终端里按 `r` 开始录制，再按一次 `r` 停止。想换一个键就用 `--key`，例如 `--key space`。录制的同时手柄可以照常控制别的程序，两边都能收到输入。
+
+```console
+$ ./record.py
+DualSense Wireless Controller (bluetooth)
+Press r to start recording and r again to stop. Ctrl+C quits.
+saved dualsense-20261117-233740.csv  1.2 s, 5 events
+```
+
+每次录制是一个 CSV 文件，保存在当前目录，或者 `--dir` 指定的目录：
+
+```csv
+time,kind,name,value
+0.000,button,cross,0
+0.000,button,circle,0
+...
+0.300,button,cross,1
+0.450,button,cross,0
+0.600,axis,left_x,-0.42189
+0.600,axis,left_y,1.00000
+0.800,button,square,0
+1.200,end,,
+```
+
+前 21 行是开始时的状态：每个按键和每个轴各一行，时间为 0。后面每次变化一行，时间是从开始算起的秒数。最后一行是停止录制的时刻。名称和取值与上面的表相同，按键按下时为 1。
+
+`./padview.py dualsense-20261117-233740.csv` 在屏幕上的手柄图里按原来的节奏回放一次录制，放完自动关闭。
+
+在程序里，用 `Replay` 代替 `DualSense`：
+
+```python
+from record import Replay
+
+pad = Replay("dualsense-20261117-233740.csv")    # 代替 DualSense()
+```
+
+它有同样的 `buttons`、`axes`、`poll()` 和 `fileno()`，并在录制时的时刻给出录下的事件，程序的其余部分不用改。录制的时钟从第一次调用 `poll()` 或 `fileno()` 开始走。放完之后 `poll()` 抛出 `EndOfRecording`，它是一种 `DualSenseError`：对为手柄写的程序来说，相当于手柄断开了。
+
+要在自己的程序里录制，把 `poll()` 的返回值交给 `Recorder`：
+
+```python
+from record import Recorder
+
+with Recorder("jump.csv", pad) as recorder:    # 先写下 pad 此刻的状态
+    while running:
+        events = pad.poll()
+        recorder.write(events)                 # 记下这次调用的时间
+```
+
 ## 工作原理
 
 内核驱动 `hid_playstation` 把手柄变成普通的输入设备。这个项目读的是其中最简单的一个：joystick 设备 `/dev/input/jsN`。任何用户都能读它，所以不用装 udev 规则，一个事件只有 8 个字节。`dualsense.py` 先问一次驱动每个编号对应哪个按键和轴，之后只管读事件。电量来自 `/sys/class/power_supply`。
@@ -121,7 +173,7 @@ inputs     : 13 buttons, 8 axes
 - 如果手柄中途配对过主机或别的电脑，回连不上了，运行 `./setup.sh --repair`。
 - `snake.py` 和 `padview.py` 的第一行特意写成 `#!/usr/bin/python3`，因为 GTK 属于系统 Python。在 conda 或 virtualenv 里，`python3 snake.py` 找不到它，`./snake.py` 可以。
 - 驱动还会把触摸板注册成鼠标。在 X11 下，`xinput disable "DualSense Wireless Controller Touchpad"` 可以关掉。
-- 在 Ubuntu 22.04（X11 会话、内核 6.8、BlueZ 5.64、Python 3.10）上用标准版 DualSense 通过蓝牙测试过。没有测试过的：Ubuntu 20.04、Wayland 会话（这时 `padview.py` 通过 XWayland 运行，只有这样窗口才能自己定位并保持置顶）、USB 连接和 DualSense Edge。
+- 在 Ubuntu 22.04（X11 会话、内核 6.8、BlueZ 5.64、Python 3.10）上用标准版 DualSense 通过蓝牙测试过。没有测试过的：Ubuntu 20.04、Wayland 会话（这时 `padview.py` 通过 XWayland 运行，只有这样窗口才能自己定位并保持置顶）、USB 连接和 DualSense Edge。`record.py` 目前只用模拟的手柄输入测试过。
 
 ## 许可
 

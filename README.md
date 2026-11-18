@@ -4,8 +4,8 @@
 
 **A PS5 DualSense on Linux, in plain Python.**
 
-One script pairs the controller over Bluetooth. Then read it from your own code,<br>
-watch it live on screen, or just play Snake with it.
+One script pairs the controller over Bluetooth. Then read it from your own code, watch it<br>
+live on screen, record what it does and play that back, or just play Snake with it.
 
 <p>
 <img alt="Linux 5.12+" src="https://img.shields.io/badge/Linux-5.12%2B-3d9eff?style=flat-square&logo=linux&logoColor=white">
@@ -28,6 +28,7 @@ watch it live on screen, or just play Snake with it.
 | [`setup.sh`](setup.sh) | Checks the kernel driver and Python, pairs and connects the controller over Bluetooth, and verifies that Python can read it. No root needed. |
 | [`dualsense.py`](dualsense.py) | The reader: buttons, sticks, triggers, D-pad and battery level. One file, standard library only. |
 | [`padview.py`](padview.py) | A picture of the controller that lights up what you press, drawn with cairo. Runs as a small always-on-top window, or inside your own program. |
+| [`record.py`](record.py) | Records what the controller does into a CSV file, started and stopped with a key, and plays a recording back. Standard library only. |
 | [`snake.py`](snake.py) | Snake, as something to steer. |
 
 ## Quick start
@@ -110,6 +111,57 @@ battery    : 95% (Charging)
 inputs     : 13 buttons, 8 axes
 ```
 
+## Recording and replay
+
+`./record.py` writes down what the controller does. Press `r` in its terminal to start a recording and `r` again to stop it. `--key` chooses another key, for example `--key space`. The controller can drive another program at the same time, because both receive its input.
+
+```console
+$ ./record.py
+DualSense Wireless Controller (bluetooth)
+Press r to start recording and r again to stop. Ctrl+C quits.
+saved dualsense-20261117-233740.csv  1.2 s, 5 events
+```
+
+Each recording is a CSV file in the current directory, or in the one given with `--dir`:
+
+```csv
+time,kind,name,value
+0.000,button,cross,0
+0.000,button,circle,0
+...
+0.300,button,cross,1
+0.450,button,cross,0
+0.600,axis,left_x,-0.42189
+0.600,axis,left_y,1.00000
+0.800,button,square,0
+1.200,end,,
+```
+
+The first 21 rows are the state at the start: one row for each button and each axis, at time 0. Then comes one row per change, with the seconds since the start. The last row is the moment the recording was stopped. Names and values are those of the table above; a button is 1 while it is pressed.
+
+`./padview.py dualsense-20261117-233740.csv` plays a recording on the on-screen controller, in real time, and closes when it is over.
+
+In a program, `Replay` takes the place of `DualSense`:
+
+```python
+from record import Replay
+
+pad = Replay("dualsense-20261117-233740.csv")    # instead of DualSense()
+```
+
+It has the same `buttons`, `axes`, `poll()` and `fileno()` and hands out the recorded events at the recorded times, so the rest of the program stays as it is. The clock of the recording starts with the first call of `poll()` or `fileno()`. When the recording is over, `poll()` raises `EndOfRecording`, which is a `DualSenseError`: a program written for the controller sees the controller going away.
+
+To record from inside a program, give what `poll()` returns to a `Recorder`:
+
+```python
+from record import Recorder
+
+with Recorder("jump.csv", pad) as recorder:    # begins with the state of pad
+    while running:
+        events = pad.poll()
+        recorder.write(events)                 # at the time of this call
+```
+
 ## How it works
 
 The kernel driver `hid_playstation` turns the controller into ordinary input devices. This project reads the plainest of them, the joystick device `/dev/input/jsN`. Any user may read it, so there are no udev rules to install, and an event is eight bytes. `dualsense.py` asks the driver once which button and axis each number stands for, and from then on it only reads events. The battery level comes from `/sys/class/power_supply`.
@@ -121,7 +173,7 @@ Pairing is where the script earns its place. On the machine this was written on,
 - If the controller was paired with a console or another computer in the meantime and no longer reconnects, run `./setup.sh --repair`.
 - `snake.py` and `padview.py` start with `#!/usr/bin/python3` on purpose, because GTK belongs to the system Python. Inside conda or a virtualenv, `python3 snake.py` does not find it; `./snake.py` does.
 - The driver also registers the touchpad as a mouse. On X11, `xinput disable "DualSense Wireless Controller Touchpad"` stops that.
-- Tested on Ubuntu 22.04 (X11 session, kernel 6.8, BlueZ 5.64, Python 3.10) with a standard DualSense over Bluetooth. Not tested: Ubuntu 20.04, a Wayland session (there `padview.py` runs through XWayland, the only way for a window to place itself and stay on top), USB, and the DualSense Edge.
+- Tested on Ubuntu 22.04 (X11 session, kernel 6.8, BlueZ 5.64, Python 3.10) with a standard DualSense over Bluetooth. Not tested: Ubuntu 20.04, a Wayland session (there `padview.py` runs through XWayland, the only way for a window to place itself and stay on top), USB, and the DualSense Edge. `record.py` has been tested with simulated controller input only so far.
 
 ## License
 
