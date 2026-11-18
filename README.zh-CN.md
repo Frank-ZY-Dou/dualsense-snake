@@ -59,7 +59,7 @@ cd dualsense-snake
 
 ## 屏幕上的手柄
 
-<img align="right" width="430" src="assets/padview.gif" alt="手柄小窗口依次演示所有输入">
+<img align="right" width="430" hspace="16" src="assets/padview.gif" alt="手柄小窗口依次演示所有输入">
 
 `./padview.py` 单独显示这张图：屏幕左下角的一个小窗口，始终在其他窗口上面，可以放在手柄正在控制的程序旁边。
 

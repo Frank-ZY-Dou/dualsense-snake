@@ -59,7 +59,7 @@ An apple is worth as many points as the current speed. `q` or `Esc` on the keybo
 
 ## The controller on screen
 
-<img align="right" width="430" src="assets/padview.gif" alt="The viewer window going through all inputs of the controller">
+<img align="right" width="430" hspace="16" src="assets/padview.gif" alt="The viewer window going through all inputs of the controller">
 
 `./padview.py` shows the picture on its own, in a small window at the bottom left of the screen that stays above other windows. Keep it next to whatever the controller is driving.
 
